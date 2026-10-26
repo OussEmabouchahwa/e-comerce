@@ -130,6 +130,9 @@ function StorePage() {
     setTimeout(() => {
       setAddedItemMap((prev) => ({ ...prev, [product.id]: false }));
     }, 1200);
+
+    // Open side drawer to immediately display selected items
+    openCart();
   };
 
   const toggleLike = (id: string) => {
