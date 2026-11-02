@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { initialJobs, JobItem } from "@/data/jobs";
 
-// In-memory fallback if local Postgres is not yet provisioned
 let memoryJobs: JobItem[] = [...initialJobs];
 
 export async function GET(request: Request) {
@@ -13,35 +12,35 @@ export async function GET(request: Request) {
     const type = searchParams.get("type") || "ALL";
     const location = searchParams.get("location")?.toLowerCase() || "";
 
-    // Try Prisma DB first
-    try {
-      const dbJobs = await prisma.job.findMany({
-        where: {
-          isActive: true,
-          ...(department !== "ALL" ? { department } : {}),
-          ...(type !== "ALL" ? { type: type as any } : {}),
-          ...(query
-            ? {
-                OR: [
-                  { title: { contains: query, mode: "insensitive" } },
-                  { description: { contains: query, mode: "insensitive" } },
-                  { company: { contains: query, mode: "insensitive" } },
-                ],
-              }
-            : {}),
-          ...(location ? { location: { contains: location, mode: "insensitive" } } : {}),
-        },
-        orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
-      });
+    if (prisma) {
+      try {
+        const dbJobs = await prisma.job.findMany({
+          where: {
+            isActive: true,
+            ...(department !== "ALL" ? { department } : {}),
+            ...(type !== "ALL" ? { type: type as any } : {}),
+            ...(query
+              ? {
+                  OR: [
+                    { title: { contains: query, mode: "insensitive" } },
+                    { description: { contains: query, mode: "insensitive" } },
+                    { company: { contains: query, mode: "insensitive" } },
+                  ],
+                }
+              : {}),
+            ...(location ? { location: { contains: location, mode: "insensitive" } } : {}),
+          },
+          orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+        });
 
-      if (dbJobs && dbJobs.length > 0) {
-        return NextResponse.json({ source: "database", jobs: dbJobs });
+        if (dbJobs && dbJobs.length > 0) {
+          return NextResponse.json({ source: "database", jobs: dbJobs });
+        }
+      } catch {
+        // Fallback
       }
-    } catch {
-      // Database not yet connected or seeded -> fallback gracefully to memoryJobs
     }
 
-    // Memory filter fallback
     let filtered = memoryJobs.filter((job) => job.isActive !== false);
 
     if (query) {
@@ -113,29 +112,31 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
     };
 
-    // Try persisting to Prisma DB
-    try {
-      const created = await prisma.job.create({
-        data: {
-          title: newJob.title,
-          company: newJob.company,
-          location: newJob.location,
-          type: newJob.type as any,
-          department: newJob.department,
-          salary: newJob.salary,
-          experience: newJob.experience,
-          description: newJob.description,
-          requirements: newJob.requirements,
-          featured: newJob.featured ?? false,
-          isActive: true,
-        },
-      });
-      return NextResponse.json({ success: true, job: created }, { status: 201 });
-    } catch {
-      // Fallback in memory
-      memoryJobs.unshift(newJob);
-      return NextResponse.json({ success: true, job: newJob }, { status: 201 });
+    if (prisma) {
+      try {
+        const created = await prisma.job.create({
+          data: {
+            title: newJob.title,
+            company: newJob.company,
+            location: newJob.location,
+            type: newJob.type as any,
+            department: newJob.department,
+            salary: newJob.salary,
+            experience: newJob.experience,
+            description: newJob.description,
+            requirements: newJob.requirements,
+            featured: newJob.featured ?? false,
+            isActive: true,
+          },
+        });
+        return NextResponse.json({ success: true, job: created }, { status: 201 });
+      } catch {
+        // Fallback
+      }
     }
+
+    memoryJobs.unshift(newJob);
+    return NextResponse.json({ success: true, job: newJob }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: "Failed to create job posting" }, { status: 500 });
   }

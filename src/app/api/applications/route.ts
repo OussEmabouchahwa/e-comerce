@@ -10,32 +10,33 @@ export async function GET(request: Request) {
     const status = searchParams.get("status");
     const jobId = searchParams.get("jobId");
 
-    // Try Prisma DB first
-    try {
-      const dbApps = await prisma.application.findMany({
-        where: {
-          ...(status ? { status: status as any } : {}),
-          ...(jobId ? { jobId } : {}),
-        },
-        include: {
-          job: {
-            select: { title: true, company: true },
+    if (prisma) {
+      try {
+        const dbApps = await prisma.application.findMany({
+          where: {
+            ...(status ? { status: status as any } : {}),
+            ...(jobId ? { jobId } : {}),
           },
-        },
-        orderBy: { createdAt: "desc" },
-      });
+          include: {
+            job: {
+              select: { title: true, company: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        });
 
-      if (dbApps && dbApps.length > 0) {
-        const formatted = dbApps.map((a) => ({
-          ...a,
-          jobTitle: a.job?.title,
-          company: a.job?.company,
-          createdAt: a.createdAt.toISOString(),
-        }));
-        return NextResponse.json({ source: "database", applications: formatted });
+        if (dbApps && dbApps.length > 0) {
+          const formatted = dbApps.map((a) => ({
+            ...a,
+            jobTitle: a.job?.title,
+            company: a.job?.company,
+            createdAt: a.createdAt.toISOString(),
+          }));
+          return NextResponse.json({ source: "database", applications: formatted });
+        }
+      } catch {
+        // Fallback
       }
-    } catch {
-      // Fallback to memory
     }
 
     let filtered = [...memoryApplications];
@@ -81,25 +82,28 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
     };
 
-    // Try DB
-    try {
-      const created = await prisma.application.create({
-        data: {
-          jobId: newApp.jobId,
-          fullName: newApp.fullName,
-          email: newApp.email,
-          phone: newApp.phone,
-          portfolio: newApp.portfolio,
-          coverLetter: newApp.coverLetter,
-          experience: newApp.experience,
-          status: "PENDING",
-        },
-      });
-      return NextResponse.json({ success: true, application: created }, { status: 201 });
-    } catch {
-      memoryApplications.unshift(newApp);
-      return NextResponse.json({ success: true, application: newApp }, { status: 201 });
+    if (prisma) {
+      try {
+        const created = await prisma.application.create({
+          data: {
+            jobId: newApp.jobId,
+            fullName: newApp.fullName,
+            email: newApp.email,
+            phone: newApp.phone,
+            portfolio: newApp.portfolio,
+            coverLetter: newApp.coverLetter,
+            experience: newApp.experience,
+            status: "PENDING",
+          },
+        });
+        return NextResponse.json({ success: true, application: created }, { status: 201 });
+      } catch {
+        // Fallback
+      }
     }
+
+    memoryApplications.unshift(newApp);
+    return NextResponse.json({ success: true, application: newApp }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: "Application submission failed" }, { status: 500 });
   }
@@ -112,21 +116,24 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "ID and status are required" }, { status: 400 });
     }
 
-    // Try DB
-    try {
-      const updated = await prisma.application.update({
-        where: { id },
-        data: { status: status as any },
-      });
-      return NextResponse.json({ success: true, application: updated });
-    } catch {
-      const found = memoryApplications.find((a) => a.id === id);
-      if (found) {
-        found.status = status;
-        return NextResponse.json({ success: true, application: found });
+    if (prisma) {
+      try {
+        const updated = await prisma.application.update({
+          where: { id },
+          data: { status: status as any },
+        });
+        return NextResponse.json({ success: true, application: updated });
+      } catch {
+        // Fallback
       }
-      return NextResponse.json({ error: "Application not found" }, { status: 404 });
     }
+
+    const found = memoryApplications.find((a) => a.id === id);
+    if (found) {
+      found.status = status;
+      return NextResponse.json({ success: true, application: found });
+    }
+    return NextResponse.json({ error: "Application not found" }, { status: 404 });
   } catch (error) {
     return NextResponse.json({ error: "Failed to update status" }, { status: 500 });
   }
