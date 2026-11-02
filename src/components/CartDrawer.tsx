@@ -142,11 +142,15 @@ export function CartDrawer() {
                     key={`${item.product.id}-${item.selectedColor}`}
                     className="pt-4 first:pt-0 pb-4 border-b border-slate-100 flex gap-4 items-center"
                   >
-                    <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-tint border border-slate-200 shrink-0">
+                    <div
+                      className="relative rounded-xl overflow-hidden bg-tint border border-slate-200 shrink-0 flex items-center justify-center p-1"
+                      style={{ width: "80px", height: "80px", minWidth: "80px", minHeight: "80px" }}
+                    >
                       <img
                         src={item.product.image}
                         alt={item.product.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
+                        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
                       />
                     </div>
                     <div className="flex-1 flex flex-col justify-between">
