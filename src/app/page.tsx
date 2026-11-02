@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { CartDrawer } from "@/components/CartDrawer";
 import { CartProvider, useCart } from "@/context/CartContext";
+import { CareersSection } from "@/components/jobs/CareersSection";
 
 interface ProductItem {
   id: string;
@@ -191,6 +192,9 @@ function StorePage() {
             <a href="#shop" className="hover:text-brand">
               New Arrivals
             </a>
+            <a href="#careers" className="hover:text-brand flex items-center gap-1">
+              Careers <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-butter text-ink">We're hiring</span>
+            </a>
             <a href="#shop" className="text-brand">
               Sale
             </a>
@@ -245,6 +249,9 @@ function StorePage() {
           </a>
           <a href="#shop" onClick={() => setMobileMenuOpen(false)}>
             New Arrivals
+          </a>
+          <a href="#careers" onClick={() => setMobileMenuOpen(false)}>
+            Careers (Jobs)
           </a>
           <a
             href="#shop"
@@ -658,6 +665,9 @@ function StorePage() {
             {newsletterMsg}
           </p>
         </section>
+
+        {/* Careers & Job Portal Application */}
+        <CareersSection />
       </main>
 
       {/* Footer */}
@@ -736,7 +746,7 @@ function StorePage() {
                 </a>
               </li>
               <li>
-                <a href="#story" className="hover:text-white">
+                <a href="#careers" className="hover:text-white">
                   Careers
                 </a>
               </li>

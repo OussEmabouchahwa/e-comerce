@@ -1,0 +1,95 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  JOB_SEEKER
+  EMPLOYER
+  ADMIN
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  REMOTE
+  CONTRACT
+  INTERNSHIP
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  INTERVIEW
+  ACCEPTED
+  REJECTED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(JOB_SEEKER)
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Employer relations
+  jobsCreated Job[] @relation("EmployerJobs")
+
+  // Job Seeker relations
+  applications Application[]
+}
+
+model Job {
+  id           String   @id @default(uuid())
+  title        String
+  company      String
+  location     String
+  type         JobType  @default(FULL_TIME)
+  department   String
+  salary       String
+  experience   String
+  description  String
+  requirements String[]
+  featured     Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  employerId String?
+  employer   User?   @relation("EmployerJobs", fields: [employerId], references: [id])
+
+  applications Application[]
+
+  @@index([department])
+  @@index([type])
+  @@index([location])
+}
+
+model Application {
+  id          String            @id @default(uuid())
+  fullName    String
+  email       String
+  phone       String
+  resumeUrl   String?
+  portfolio   String?
+  coverLetter String
+  experience  String
+  status      ApplicationStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@index([jobId])
+  @@index([status])
+}
